@@ -4,6 +4,7 @@ import { AuthProvider } from './providers/AuthProvider'
 
 // Pages
 import LoginPage from './pages/LoginPage'
+import OAuthCallbackPage from './pages/OAuthCallbackPage'
 import DashboardPage from './pages/DashboardPage'
 import DocumentsPage from './pages/DocumentsPage'
 import SearchPage from './pages/SearchPage'
@@ -24,6 +25,11 @@ function AppRoutes() {
         <LoadingSpinner size="lg" />
       </div>
     )
+  }
+
+  // Handle OAuth callback route (should be accessible without authentication)
+  if (window.location.pathname === '/auth/callback') {
+    return <OAuthCallbackPage />
   }
 
   if (!user) {

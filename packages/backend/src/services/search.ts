@@ -24,6 +24,7 @@ export interface SearchOptions {
 export class SearchService {
   private pinecone: Pinecone;
   private indexName: string;
+  private isAvailable: boolean = false;
 
   constructor() {
     this.pinecone = new Pinecone({
@@ -52,9 +53,15 @@ export class SearchService {
       }
       
       logger.info('Pinecone search service initialized');
-    } catch (error) {
-      logger.error('Failed to initialize Pinecone:', error);
-      throw error;
+      this.isAvailable = true;
+    } catch (error: any) {
+      logger.warn(`Pinecone initialization failed: ${error.message}`);
+      logger.warn('Search functionality will be disabled. To enable search:');
+      logger.warn('1. Upgrade your Pinecone plan to allow pod creation');
+      logger.warn('2. Or use an existing Pinecone index by setting PINECONE_INDEX_NAME');
+      logger.warn('3. Or delete unused indexes to free up pod capacity');
+      this.isAvailable = false;
+      // Don't throw error - allow app to start without search
     }
   }
 
@@ -84,6 +91,11 @@ export class SearchService {
    * Upsert embeddings to Pinecone
    */
   async upsertEmbeddings(documentId: string): Promise<void> {
+    if (!this.isAvailable) {
+      logger.warn('Pinecone not available - skipping embedding upsert');
+      return;
+    }
+
     try {
       logger.info(`Upserting embeddings for document ${documentId}`);
       
@@ -137,6 +149,11 @@ export class SearchService {
    * Search for similar documents
    */
   async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
+    if (!this.isAvailable) {
+      logger.warn('Pinecone not available - returning empty search results');
+      return [];
+    }
+
     try {
       const {
         topK = 10,
@@ -207,6 +224,11 @@ export class SearchService {
    * Delete embeddings for a document
    */
   async deleteDocumentEmbeddings(documentId: string): Promise<void> {
+    if (!this.isAvailable) {
+      logger.warn('Pinecone not available - skipping embedding deletion');
+      return;
+    }
+
     try {
       const chunks = await prisma.documentChunk.findMany({
         where: { documentId },
@@ -232,6 +254,10 @@ export class SearchService {
    * Get index statistics
    */
   async getIndexStats(): Promise<any> {
+    if (!this.isAvailable) {
+      return { message: 'Pinecone not available' };
+    }
+
     try {
       const index = this.pinecone.index(this.indexName);
       return await index.describeIndexStats();
