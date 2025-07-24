@@ -10,6 +10,7 @@ import documentRoutes from './routes/documents';
 import searchRoutes from './routes/search';
 import pdfRoutes from './routes/pdf';
 import userRoutes from './routes/users';
+import dashboardRoutes from './routes/dashboard';
 import { errorHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 import { initializeServices } from './services';
@@ -66,6 +67,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/pdf', pdfRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

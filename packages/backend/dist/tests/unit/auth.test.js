@@ -60,6 +60,14 @@ describe('Auth Routes', () => {
             expect(response.body.authUrl).toContain('http://mock-auth-url');
         });
     });
+    describe('GET /api/auth/google/redirect', () => {
+        it('should redirect to Google OAuth URL', async () => {
+            const response = await (0, supertest_1.default)(app)
+                .get('/api/auth/google/redirect')
+                .expect(302);
+            expect(response.headers.location).toContain('http://mock-auth-url');
+        });
+    });
     describe('POST /api/auth/google/callback', () => {
         it('should create new user and return tokens', async () => {
             const mockUser = {

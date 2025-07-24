@@ -7,6 +7,7 @@ const index_1 = require("../index");
 const _1 = require("./");
 class SearchService {
     constructor() {
+        this.isAvailable = false;
         this.pinecone = new pinecone_1.Pinecone({
             apiKey: process.env.PINECONE_API_KEY,
             environment: process.env.PINECONE_ENVIRONMENT || 'us-east-1-aws',
@@ -29,10 +30,16 @@ class SearchService {
                 await this.waitForIndexReady();
             }
             logger_1.logger.info('Pinecone search service initialized');
+            this.isAvailable = true;
         }
         catch (error) {
-            logger_1.logger.error('Failed to initialize Pinecone:', error);
-            throw error;
+            logger_1.logger.warn(`Pinecone initialization failed: ${error.message}`);
+            logger_1.logger.warn('Search functionality will be disabled. To enable search:');
+            logger_1.logger.warn('1. Upgrade your Pinecone plan to allow pod creation');
+            logger_1.logger.warn('2. Or use an existing Pinecone index by setting PINECONE_INDEX_NAME');
+            logger_1.logger.warn('3. Or delete unused indexes to free up pod capacity');
+            this.isAvailable = false;
+            // Don't throw error - allow app to start without search
         }
     }
     async waitForIndexReady() {
@@ -58,6 +65,10 @@ class SearchService {
      * Upsert embeddings to Pinecone
      */
     async upsertEmbeddings(documentId) {
+        if (!this.isAvailable) {
+            logger_1.logger.warn('Pinecone not available - skipping embedding upsert');
+            return;
+        }
         try {
             logger_1.logger.info(`Upserting embeddings for document ${documentId}`);
             // Get document chunks with embeddings
@@ -104,6 +115,10 @@ class SearchService {
      * Search for similar documents
      */
     async search(query, options = {}) {
+        if (!this.isAvailable) {
+            logger_1.logger.warn('Pinecone not available - returning empty search results');
+            return [];
+        }
         try {
             const { topK = 10, scoreThreshold = 0.7, userId, } = options;
             // Generate embedding for query
@@ -164,6 +179,10 @@ class SearchService {
      * Delete embeddings for a document
      */
     async deleteDocumentEmbeddings(documentId) {
+        if (!this.isAvailable) {
+            logger_1.logger.warn('Pinecone not available - skipping embedding deletion');
+            return;
+        }
         try {
             const chunks = await index_1.prisma.documentChunk.findMany({
                 where: { documentId },
@@ -185,6 +204,9 @@ class SearchService {
      * Get index statistics
      */
     async getIndexStats() {
+        if (!this.isAvailable) {
+            return { message: 'Pinecone not available' };
+        }
         try {
             const index = this.pinecone.index(this.indexName);
             return await index.describeIndexStats();

@@ -17,6 +17,7 @@ export interface SearchOptions {
 export declare class SearchService {
     private pinecone;
     private indexName;
+    private isAvailable;
     constructor();
     initialize(): Promise<void>;
     private waitForIndexReady;

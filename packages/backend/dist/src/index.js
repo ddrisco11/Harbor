@@ -15,6 +15,7 @@ const documents_1 = __importDefault(require("./routes/documents"));
 const search_1 = __importDefault(require("./routes/search"));
 const pdf_1 = __importDefault(require("./routes/pdf"));
 const users_1 = __importDefault(require("./routes/users"));
+const dashboard_1 = __importDefault(require("./routes/dashboard"));
 const errorHandler_1 = require("./middleware/errorHandler");
 const logger_1 = require("./utils/logger");
 const services_1 = require("./services");
@@ -62,6 +63,7 @@ app.use('/api/documents', documents_1.default);
 app.use('/api/search', search_1.default);
 app.use('/api/pdf', pdf_1.default);
 app.use('/api/users', users_1.default);
+app.use('/api/dashboard', dashboard_1.default);
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({

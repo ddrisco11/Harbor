@@ -37,6 +37,23 @@ router.get('/google', (req, res) => {
     res.json({ authUrl });
 });
 /**
+ * GET /api/auth/google/redirect - Direct redirect to Google OAuth (server-side)
+ * Alternative approach: use this for simple <a href="/api/auth/google/redirect">
+ */
+router.get('/google/redirect', (req, res) => {
+    const scopes = [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/drive.readonly',
+    ];
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes,
+        prompt: 'consent',
+    });
+    res.redirect(authUrl);
+});
+/**
  * POST /api/auth/google/callback - Handle Google OAuth callback
  */
 router.post('/google/callback', (0, errorHandler_1.asyncHandler)(async (req, res) => {
