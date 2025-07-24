@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: harbor-postgres
+    environment:
+      POSTGRES_DB: harbor
+      POSTGRES_USER: harbor
+      POSTGRES_PASSWORD: harbor123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U harbor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: harbor-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: harbor-backend
+    environment:
+      DATABASE_URL: postgresql://harbor:harbor123@postgres:5432/harbor
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: super-secret-jwt-key-for-development
+      JWT_REFRESH_SECRET: super-secret-refresh-key-for-development
+      NODE_ENV: development
+      PORT: 3001
+      FRONTEND_URL: http://localhost:3000
+    env_file:
+      - ./packages/backend/.env
+    volumes:
+      - ./packages/backend:/app
+      - /app/node_modules
+      - harbor_storage:/app/storage
+      - harbor_logs:/app/logs
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend App
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+    container_name: harbor-frontend
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    volumes:
+      - ./packages/frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  # Background Worker
+  worker:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: harbor-worker
+    command: npm run worker
+    environment:
+      DATABASE_URL: postgresql://harbor:harbor123@postgres:5432/harbor
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+    env_file:
+      - ./packages/backend/.env
+    volumes:
+      - ./packages/backend:/app
+      - /app/node_modules
+      - harbor_storage:/app/storage
+      - harbor_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  harbor_storage:
+  harbor_logs:
+
+networks:
+  default:
+    name: harbor-network 
